@@ -1,3 +1,12 @@
+/*
+ * Coded by: 
+ *  Robin Costas del Moral 
+ *  Antonio Jaimez Jimenez
+ *  
+ *    TE < ETSIIT < UGR
+ *    
+ */
+ 
 #include <RH_ASK.h>
 #include <SPI.h> // Not actually used but needed to compile
 
