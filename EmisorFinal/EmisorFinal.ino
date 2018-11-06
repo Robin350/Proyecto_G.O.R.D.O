@@ -1,7 +1,9 @@
 #include <RH_ASK.h>
 #include <SPI.h> // Not actually used but needed to compile
-
 #include "I2Cdev.h"
+#include "MPU6050.h"
+#include "Wire.h"
+
 RH_ASK driver(2000,2,9,10);
 #define BOTON 12
 #define RIGHT_BLINKER 0
@@ -11,6 +13,16 @@ RH_ASK driver(2000,2,9,10);
 #define LIGHTS_BUTTON 5
 #define BRAKE_BUTTON 6
 
+const int mpuAddress = 0x68; // Could be 0x68 o 0x69
+MPU6050 mpu(mpuAddress);
+
+int ax, ay, az;
+int gx, gy, gz;
+
+long prev_time;
+float dt;
+float ang_x, ang_y;
+float ang_x_prev, ang_y_prev;
 
 void setup()
 {
@@ -55,11 +67,11 @@ void updateFiltered()
 }
 
 void interruptBrakeHandler(){
-  send_message(BRAKE);
+  sendMessage(BRAKE);
 }
 
 void interruptLightsHandler(){
-  send_message(LIGHTS);
+  sendMessage(LIGHTS);
 }
 
  /* Message sending handler
@@ -67,6 +79,7 @@ void interruptLightsHandler(){
  * Return void;
  */
 void sendMessage(int id){
+   char *msg="";
    switch(id){
     
     /* Activate right blinker */
@@ -119,10 +132,10 @@ void loop()
 
   //////////////////BUTTONS AND MOVEMENT DETECTION///////////////////////////////////////////////////////
   if(ang_y>45){
-    send_message(RIGHT_BLINKER); 
+    sendMessage(RIGHT_BLINKER); 
   }
   else if(ang_y<-45){
-    send_message(LEFT_BLINKER);   
+    sendMessage(LEFT_BLINKER);   
   }
  
 delay(50);
