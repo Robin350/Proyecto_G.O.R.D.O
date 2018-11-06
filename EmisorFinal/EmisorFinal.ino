@@ -4,8 +4,8 @@
 #include "MPU6050.h"
 #include "Wire.h"
 
-RH_ASK driver(2000,2,9,10);
-#define BOTON 12
+RH_ASK driver(2000,2,5,10);
+#define BOTON 1
 #define RIGHT_BLINKER 0
 #define LEFT_BLINKER 1
 #define LIGHTS 2
