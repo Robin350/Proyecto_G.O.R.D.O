@@ -10,11 +10,11 @@
 #include <RH_ASK.h>
 #include <SPI.h> // Not actually used but needed to compile
 
-#define RIGHT 8
-#define LEFT 9
-#define BRAKE_LIGHT 10
-#define FRONT_LIGHT 11
-#define DATA_R 12
+#define RIGHT 4
+#define LEFT 3
+#define BRAKE_LIGHT 2
+#define FRONT_LIGHT 1
+#define DATA_R 5
 
 #define RIGHT_BLINKER 0
 #define LEFT_BLINKER 1
