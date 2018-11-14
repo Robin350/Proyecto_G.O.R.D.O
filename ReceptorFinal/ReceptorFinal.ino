@@ -10,11 +10,11 @@
 #include <RH_ASK.h>
 #include <SPI.h> // Not actually used but needed to compile
 
-#define RIGHT 4
-#define LEFT 3
+#define RIGHT 7
+#define LEFT 6
 #define BRAKE_LIGHT 2
 #define FRONT_LIGHT 1
-#define DATA_R 5
+#define DATA_R 4
 
 #define RIGHT_BLINKER 0
 #define LEFT_BLINKER 1
@@ -104,11 +104,9 @@ void loop()
     
         driver.recv(buf, &buflen); // Non-blocking
         int i;
-        Serial.print("Message: ");
-        Serial.println((char*)buf);
 
         switch(buf[0]){
-           case RIGHT_BLINKER:
+           case 0x31:
             right = !right;
             bl = true;
             break;

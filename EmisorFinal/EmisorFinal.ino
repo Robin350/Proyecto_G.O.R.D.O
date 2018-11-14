@@ -141,10 +141,19 @@ void loop()
 
   ///////////////////////////////////////////////////////INTERMITENTES/////////
   if (ang_y > 45) {
-    sendMessage(RIGHT_MESSAGE);
+    if(!active){
+      sendMessage(RIGHT_MESSAGE);
+      active = true;
+    }
   }
   else if (ang_y < -45) {
-    sendMessage(LEFT_MESSAGE);
+    if(!active){
+      sendMessage(LEFT_MESSAGE);
+      active = true;
+    }
+  }
+  else{
+    active = false;
   }
 
   delay(50);
