@@ -21,8 +21,7 @@
 #define BRAKE_MESSAGE 3
 
 // Variables for the MPU6050
-const int mpuAddress = 0x68;
-MPU6050 mpu(mpuAddress);
+MPU6050 accelgyro;
 
 int ax, ay, az;
 int gx, gy, gz;
@@ -33,7 +32,7 @@ float ang_y;
 float ang_y_prev;
 
 // Variables for the Radio
-RH_ASK driver(2000,2,5,10);
+RH_ASK driver(2000, 2, 5, 10);
 
 // Bool for lights status controlling
 bool turn_on = false;
@@ -41,6 +40,7 @@ bool active = false;
 bool active_left = false;
 bool active_right = false;
 bool lights = false;
+bool brake = false;
 
 void setup()
 {
@@ -48,14 +48,27 @@ void setup()
   Serial.begin(9600);
 
   // MPU6050 initialization
+  /*Wire.begin();
+    mpu.initialize();
+    Serial.println(mpu.testConnection() ? F("IMU iniciado correctamente") : F("Error al iniciar IMU"));*/
+#if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
   Wire.begin();
-  mpu.initialize();
-  Serial.println(mpu.testConnection() ? F("IMU iniciado correctamente") : F("Error al iniciar IMU"));
+#elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
+  Fastwire::setup(400, true);
+#endif
+
+    // initialize device
+    Serial.println("Initializing I2C devices...");
+    accelgyro.initialize();
+
+    // verify connection
+    Serial.println("Testing device connections...");
+    Serial.println(accelgyro.testConnection() ? "MPU6050 connection successful" : "MPU6050 connection failed");
 
   //Radio initialization
   if (!driver.init())
     Serial.println("init failed");
-    
+
   // PIN initialization
   pinMode(LEFT_BLINKER, OUTPUT);
   pinMode(RIGHT_BLINKER, OUTPUT);
@@ -70,9 +83,23 @@ void setup()
   digitalWrite(BRAKE_LIGHT, LOW);
 
   // Interrupt initialization
-  //attachInterrupt(digitalPinToInterrupt(LIGHTS_BUTTON), lightsSwitch, CHANGE);
-
+  attachInterrupt(digitalPinToInterrupt(LIGHTS_BUTTON), lightsSwitch, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(BRAKE_BUTTON), brakeActivation, CHANGE);
 }
+
+void lightsSwitch(){
+
+  if(digitalRead(LIGHTS_BUTTON) == HIGH)
+    lights = true;
+  
+}
+
+void brakeActivation(){
+
+  brake = true;
+    
+}
+
 
 void updateFiltered()
 {
@@ -91,9 +118,9 @@ void Blinkers(int LED, bool on) {
   (on) ? digitalWrite(LED, HIGH) : digitalWrite(LED, LOW);
 }
 
-void sendMessage(int message){
+void sendMessage(int message) {
   char *msg;
-  switch (message){
+  switch (message) {
     case RIGHT_MESSAGE:
       msg = "0";
       driver.send((uint8_t *)msg, strlen(msg));
@@ -101,7 +128,7 @@ void sendMessage(int message){
       Serial.print("Enviamos: ");
       Serial.println(msg);
       break;
-      
+
     case LEFT_MESSAGE:
       msg = "1";
       driver.send((uint8_t *)msg, strlen(msg));
@@ -109,7 +136,7 @@ void sendMessage(int message){
       Serial.print("Enviamos: ");
       Serial.println(msg);
       break;
-      
+
     case LIGHTS_MESSAGE:
       msg = "2";
       driver.send((uint8_t *)msg, strlen(msg));
@@ -117,7 +144,7 @@ void sendMessage(int message){
       Serial.print("Enviamos: ");
       Serial.println(msg);
       break;
-      
+
     case BRAKE_MESSAGE:
       msg = "3";
       driver.send((uint8_t *)msg, strlen(msg));
@@ -131,29 +158,38 @@ void sendMessage(int message){
 void loop()
 {
 
-  mpu.getAcceleration(&ax, &ay, &az);
-  mpu.getRotation(&gx, &gy, &gz);
+  accelgyro.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
 
   updateFiltered();
-
+  /*
   Serial.print(F("\t Rotacion en Y: "));
   Serial.println(ang_y);
-
+  */
   ///////////////////////////////////////////////////////INTERMITENTES/////////
   if (ang_y > 45) {
-    if(!active){
+    if (!active) {
       sendMessage(RIGHT_MESSAGE);
       active = true;
     }
   }
   else if (ang_y < -45) {
-    if(!active){
+    if (!active) {
       sendMessage(LEFT_MESSAGE);
       active = true;
     }
   }
-  else{
+  else {
     active = false;
+  }
+
+  if(lights){
+    sendMessage(LIGHTS_MESSAGE);
+    lights = false;
+  }
+  
+  if(brake){
+    sendMessage(BRAKE_MESSAGE);
+    brake = false;
   }
 
   delay(50);
