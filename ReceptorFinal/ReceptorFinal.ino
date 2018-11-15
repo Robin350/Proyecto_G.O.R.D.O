@@ -10,10 +10,10 @@
 #include <RH_ASK.h>
 #include <SPI.h> // Not actually used but needed to compile
 
-#define RIGHT 7
-#define LEFT 6
-#define BRAKE_LIGHT 2
-#define FRONT_LIGHT 1
+#define RIGHT 10
+#define LEFT 11
+#define BRAKE_LIGHT 9
+#define FRONT_LIGHT 8
 #define DATA_R 4
 
 #define RIGHT_BLINKER 0
@@ -31,10 +31,21 @@ bool brake = false;
 
 void setup()
 {
+  
     Serial.begin(9600); // Debugging only
     if (!driver.init())
          Serial.println("init failed");
-    pinMode(LED_BUILTIN,OUTPUT);
+    pinMode(LEFT_BLINKER,OUTPUT);
+    pinMode(RIGHT_BLINKER,OUTPUT);
+    pinMode(BRAKE_LIGHT,OUTPUT);
+    pinMode(FRONT_LIGHT,OUTPUT);
+
+    digitalWrite(LEFT_BLINKER,LOW);
+    digitalWrite(RIGHT_BLINKER,LOW);
+    digitalWrite(BRAKE_LIGHT,LOW);
+    digitalWrite(FRONT_LIGHT,LOW);
+    
+    Serial.print("hola");
 }
 
 void Blinkers(int LED){
@@ -85,8 +96,8 @@ void Front(){
 
 void updateLights(bool bl, bool fr, bool br){
   b_on=!b_on;
-  if(bl)
-    Blink();
+  
+  Blink();
   if(fr)
     Front();
   if(br)
@@ -100,13 +111,14 @@ void loop()
     bool bl,fr,br;
     bl=fr=br=false;
     if(driver.available()){
-        Serial.println("There is a message");
     
         driver.recv(buf, &buflen); // Non-blocking
-        int i;
-
-        switch(buf[0]){
-           case 0x31:
+        driver.printBuffer("There is a message:",buf, buflen);
+        int num = atoi((const char*) buf);
+        
+        Serial.print(num);
+        switch(num){
+           case RIGHT_BLINKER:
             right = !right;
             bl = true;
             break;
@@ -116,7 +128,7 @@ void loop()
             bl = true;
             break;
 
-           case LIGHTS:
+           /*case LIGHTS:
             lights = !lights;
             fr = true;
             break;
@@ -124,10 +136,10 @@ void loop()
            case BRAKE:
             brake = !brake;
             br = true;
-            break;
+            break;*/
 
            default:
-            Serial.println("Vaya basura acabo de recibir");
+            Serial.print(num);
             break;
         }
     }
