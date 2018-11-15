@@ -10,10 +10,10 @@
 #include <RH_ASK.h>
 #include <SPI.h> // Not actually used but needed to compile
 
-#define RIGHT 7
-#define LEFT 6
-#define BRAKE_LIGHT 2
-#define FRONT_LIGHT 1
+#define RIGHT 10
+#define LEFT 11
+#define BRAKE_LIGHT 9
+#define FRONT_LIGHT 8
 #define DATA_R 4
 
 #define RIGHT_BLINKER 0
@@ -23,18 +23,35 @@
 
 RH_ASK driver(2000,DATA_R,2,10);
 
+char sblink = '0';
 bool left = false;
 bool right = false;
 bool b_on = false;
 bool lights = false;
 bool brake = false;
+const long interval = 50;
+unsigned long previousMillis = 0;        
 
 void setup()
 {
-    Serial.begin(9600); // Debugging only
+  
+    //Serial.begin(9600); // Debugging only
     if (!driver.init())
          Serial.println("init failed");
-    pinMode(LED_BUILTIN,OUTPUT);
+    pinMode(LEFT_BLINKER,OUTPUT);
+    pinMode(RIGHT_BLINKER,OUTPUT);
+    pinMode(BRAKE_LIGHT,OUTPUT);
+    pinMode(FRONT_LIGHT,OUTPUT);
+
+    digitalWrite(LEFT_BLINKER,LOW);
+    digitalWrite(RIGHT_BLINKER,LOW);
+    digitalWrite(BRAKE_LIGHT,LOW);
+    digitalWrite(FRONT_LIGHT,LOW);
+    
+    Serial.print("hola");
+
+    TIMSK2 = (TIMSK2 & B11111110) | 0x01;
+    TCCR2B = (TCCR2B & B11111000) | 0x07;
 }
 
 void Blinkers(int LED){
@@ -42,17 +59,22 @@ void Blinkers(int LED){
 }
 
 void Blink(){
-  if(right){
+  if(sblink == 'r'){
     Blinkers(RIGHT);
-    if(left)
+    if(left){
       digitalWrite(LEFT,LOW);
+      left = false;
+    }
   }
-  else if(left){
+  else if(sblink == 'l'){
     Blinkers(LEFT);
-    if(right)
+    if(right){
       digitalWrite(RIGHT,LOW);
+      right = false;
+    }
   }
   else{
+    right=left=false;
     digitalWrite(RIGHT,LOW);
     digitalWrite(LEFT,LOW);
   }
@@ -63,9 +85,9 @@ void Brake(){
     if(brake){
       digitalWrite(BRAKE_LIGHT,HIGH);
     }
-    else if(lights){
+    /*else if(lights){
       analogWrite(BRAKE_LIGHT,50);
-    }
+    }*/
     else{
       digitalWrite(BRAKE_LIGHT,LOW);
     }
@@ -74,7 +96,7 @@ void Brake(){
 void Front(){
     if(lights){
       digitalWrite(FRONT_LIGHT,HIGH);
-      analogWrite(BRAKE_LIGHT,50);
+      //analogWrite(BRAKE_LIGHT,50);
     }
     else{
       digitalWrite(FRONT_LIGHT,LOW);
@@ -84,13 +106,15 @@ void Front(){
 }
 
 void updateLights(bool bl, bool fr, bool br){
-  b_on=!b_on;
-  if(bl)
-    Blink();
+  Blink();
   if(fr)
     Front();
   if(br)
     Brake();
+}
+
+ISR(TIMER2_OVF_vect){
+   b_on=!b_on;
 }
 
 void loop()
@@ -98,22 +122,28 @@ void loop()
     uint8_t buf[5];
     uint8_t buflen = sizeof(buf);
     bool bl,fr,br;
+    unsigned long currentMillis = millis();
     bl=fr=br=false;
+    
     if(driver.available()){
-        Serial.println("There is a message");
     
         driver.recv(buf, &buflen); // Non-blocking
-        int i;
-
-        switch(buf[0]){
-           case 0x31:
+        int num = atoi((const char*) buf);
+        switch(num){
+           case RIGHT_BLINKER:
             right = !right;
-            bl = true;
+            if(right)
+              sblink = 'r';
+            else
+              sblink = 'o';
             break;
 
            case LEFT_BLINKER:
             left = !left;
-            bl = true;
+            if(left)
+              sblink = 'l';
+            else
+              sblink = 'o';
             break;
 
            case LIGHTS:
@@ -125,13 +155,8 @@ void loop()
             brake = !brake;
             br = true;
             break;
-
-           default:
-            Serial.println("Vaya basura acabo de recibir");
-            break;
         }
     }
 
     updateLights(bl,fr,br);
-    delay(50);
 }
