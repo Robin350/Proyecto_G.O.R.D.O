@@ -128,7 +128,7 @@ void loop()
             bl = true;
             break;
 
-           /*case LIGHTS:
+           case LIGHTS:
             lights = !lights;
             fr = true;
             break;
@@ -136,10 +136,6 @@ void loop()
            case BRAKE:
             brake = !brake;
             br = true;
-            break;*/
-
-           default:
-            Serial.print(num);
             break;
         }
     }
