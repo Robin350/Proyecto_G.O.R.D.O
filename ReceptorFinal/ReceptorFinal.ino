@@ -23,16 +23,19 @@
 
 RH_ASK driver(2000,DATA_R,2,10);
 
+char sblink = '0';
 bool left = false;
 bool right = false;
 bool b_on = false;
 bool lights = false;
 bool brake = false;
+const long interval = 50;
+unsigned long previousMillis = 0;        
 
 void setup()
 {
   
-    Serial.begin(9600); // Debugging only
+    //Serial.begin(9600); // Debugging only
     if (!driver.init())
          Serial.println("init failed");
     pinMode(LEFT_BLINKER,OUTPUT);
@@ -46,6 +49,9 @@ void setup()
     digitalWrite(FRONT_LIGHT,LOW);
     
     Serial.print("hola");
+
+    TIMSK2 = (TIMSK2 & B11111110) | 0x01;
+    TCCR2B = (TCCR2B & B11111000) | 0x07;
 }
 
 void Blinkers(int LED){
@@ -53,17 +59,22 @@ void Blinkers(int LED){
 }
 
 void Blink(){
-  if(right){
+  if(sblink == 'r'){
     Blinkers(RIGHT);
-    if(left)
+    if(left){
       digitalWrite(LEFT,LOW);
+      left = false;
+    }
   }
-  else if(left){
+  else if(sblink == 'l'){
     Blinkers(LEFT);
-    if(right)
+    if(right){
       digitalWrite(RIGHT,LOW);
+      right = false;
+    }
   }
   else{
+    right=left=false;
     digitalWrite(RIGHT,LOW);
     digitalWrite(LEFT,LOW);
   }
@@ -74,9 +85,9 @@ void Brake(){
     if(brake){
       digitalWrite(BRAKE_LIGHT,HIGH);
     }
-    else if(lights){
+    /*else if(lights){
       analogWrite(BRAKE_LIGHT,50);
-    }
+    }*/
     else{
       digitalWrite(BRAKE_LIGHT,LOW);
     }
@@ -85,7 +96,7 @@ void Brake(){
 void Front(){
     if(lights){
       digitalWrite(FRONT_LIGHT,HIGH);
-      analogWrite(BRAKE_LIGHT,50);
+      //analogWrite(BRAKE_LIGHT,50);
     }
     else{
       digitalWrite(FRONT_LIGHT,LOW);
@@ -95,8 +106,6 @@ void Front(){
 }
 
 void updateLights(bool bl, bool fr, bool br){
-  b_on=!b_on;
-  
   Blink();
   if(fr)
     Front();
@@ -104,28 +113,37 @@ void updateLights(bool bl, bool fr, bool br){
     Brake();
 }
 
+ISR(TIMER2_OVF_vect){
+   b_on=!b_on;
+}
+
 void loop()
 {
     uint8_t buf[5];
     uint8_t buflen = sizeof(buf);
     bool bl,fr,br;
+    unsigned long currentMillis = millis();
     bl=fr=br=false;
+    
     if(driver.available()){
     
         driver.recv(buf, &buflen); // Non-blocking
-        driver.printBuffer("There is a message:",buf, buflen);
         int num = atoi((const char*) buf);
-        
-        Serial.print(num);
         switch(num){
            case RIGHT_BLINKER:
             right = !right;
-            bl = true;
+            if(right)
+              sblink = 'r';
+            else
+              sblink = 'o';
             break;
 
            case LEFT_BLINKER:
             left = !left;
-            bl = true;
+            if(left)
+              sblink = 'l';
+            else
+              sblink = 'o';
             break;
 
            case LIGHTS:
@@ -141,5 +159,4 @@ void loop()
     }
 
     updateLights(bl,fr,br);
-    delay(50);
 }
