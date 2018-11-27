@@ -10,10 +10,10 @@
 #include <RH_ASK.h>
 #include <SPI.h> // Not actually used but needed to compile
 
-#define RIGHT 10
-#define LEFT 11
-#define BRAKE_LIGHT 9
-#define FRONT_LIGHT 8
+#define RIGHT 12
+#define LEFT 10
+#define BRAKE_LIGHT 11
+#define FRONT_LIGHT 13
 #define DATA_R 4
 
 #define RIGHT_BLINKER 0
@@ -23,21 +23,17 @@
 
 RH_ASK driver(2000,DATA_R,2,10);
 
-char sblink = '0';
 bool left = false;
 bool right = false;
-bool b_on = false;
+bool b_on = true;
 bool lights = false;
-bool brake = false;
-const long interval = 50;
-unsigned long previousMillis = 0;        
+bool brake = false;       
 
 void setup()
 {
   
-    //Serial.begin(9600); // Debugging only
-    if (!driver.init())
-         Serial.println("init failed");
+    Serial.begin(19200); // Debugging only
+    driver.init();
     pinMode(LEFT_BLINKER,OUTPUT);
     pinMode(RIGHT_BLINKER,OUTPUT);
     pinMode(BRAKE_LIGHT,OUTPUT);
@@ -49,9 +45,6 @@ void setup()
     digitalWrite(FRONT_LIGHT,LOW);
     
     Serial.print("hola");
-
-    TIMSK2 = (TIMSK2 & B11111110) | 0x01;
-    TCCR2B = (TCCR2B & B11111000) | 0x07;
 }
 
 void Blinkers(int LED){
@@ -59,14 +52,14 @@ void Blinkers(int LED){
 }
 
 void Blink(){
-  if(sblink == 'r'){
+  if(right){
     Blinkers(RIGHT);
     if(left){
       digitalWrite(LEFT,LOW);
       left = false;
     }
   }
-  else if(sblink == 'l'){
+  else if(left){
     Blinkers(LEFT);
     if(right){
       digitalWrite(RIGHT,LOW);
@@ -85,9 +78,6 @@ void Brake(){
     if(brake){
       digitalWrite(BRAKE_LIGHT,HIGH);
     }
-    /*else if(lights){
-      analogWrite(BRAKE_LIGHT,50);
-    }*/
     else{
       digitalWrite(BRAKE_LIGHT,LOW);
     }
@@ -96,7 +86,6 @@ void Brake(){
 void Front(){
     if(lights){
       digitalWrite(FRONT_LIGHT,HIGH);
-      //analogWrite(BRAKE_LIGHT,50);
     }
     else{
       digitalWrite(FRONT_LIGHT,LOW);
@@ -105,25 +94,19 @@ void Front(){
     }
 }
 
-void updateLights(bool bl, bool fr, bool br){
-  Blink();
+void updateLights(bool fr, bool br){
   if(fr)
     Front();
   if(br)
     Brake();
 }
 
-ISR(TIMER2_OVF_vect){
-   b_on=!b_on;
-}
-
 void loop()
 {
     uint8_t buf[5];
     uint8_t buflen = sizeof(buf);
-    bool bl,fr,br;
-    unsigned long currentMillis = millis();
-    bl=fr=br=false;
+    bool fr,br;
+    fr=br=false;
     
     if(driver.available()){
     
@@ -131,19 +114,27 @@ void loop()
         int num = atoi((const char*) buf);
         switch(num){
            case RIGHT_BLINKER:
+            
             right = !right;
-            if(right)
-              sblink = 'r';
-            else
-              sblink = 'o';
+            if(right){
+              Serial.print("Encendemos derecha\n");
+              digitalWrite(RIGHT,HIGH);
+            }
+            else{
+              Serial.print("Apagamos derecha\n");
+              digitalWrite(RIGHT, LOW);
+            }
             break;
 
            case LEFT_BLINKER:
             left = !left;
-            if(left)
-              sblink = 'l';
-            else
-              sblink = 'o';
+            
+            if(left){
+              digitalWrite(LEFT,HIGH);
+            }
+            else{
+              digitalWrite(LEFT, LOW);
+            }
             break;
 
            case LIGHTS:
@@ -158,5 +149,5 @@ void loop()
         }
     }
 
-    updateLights(bl,fr,br);
+    updateLights(fr,br);
 }

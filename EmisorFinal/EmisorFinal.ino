@@ -2,17 +2,15 @@
 //SCL - Pin A5
 #include <RH_ASK.h>
 #include <SPI.h> // Not actually used but needed to compile
-#include "I2Cdev.h"
-#include "MPU6050.h"
-#include "Wire.h"
+#include <I2Cdev.h>
+#include <MPU6050.h>
+#include <Wire.h>
 
 // Defines for Arduino PINs
-#define LEFT_BLINKER 7
-#define RIGHT_BLINKER 8
-#define FRONT_LIGHT 10
-#define BRAKE_LIGHT 11
-#define LIGHTS_BUTTON 2
-#define BRAKE_BUTTON 3
+#define LIGHTS_BUTTON 7
+#define BRAKE_BUTTON 6
+#define LEFT_BLINKER 8
+#define RIGHT_BLINKER 9
 
 // Defines for message codes
 #define RIGHT_MESSAGE 0
@@ -21,16 +19,16 @@
 #define BRAKE_MESSAGE 3
 
 // Variables for the MPU6050
-const int mpuAddress = 0x68;
-MPU6050 mpu(mpuAddress);
+//const int mpuAddress = 0x68;
+//MPU6050 mpu(mpuAddress);
 
-int ax, ay, az;
-int gx, gy, gz;
+//int ax, ay, az;
+//int gx, gy, gz;
 
-long prev_time;
-float dt;
-float ang_y;
-float ang_y_prev;
+//long prev_time;
+//float dt;
+//float ang_y;
+//float ang_y_prev;
 
 // Variables for the Radio
 RH_ASK driver(2000,2,5,10);
@@ -48,33 +46,28 @@ void setup()
   Serial.begin(9600);
 
   // MPU6050 initialization
-  Wire.begin();
-  mpu.initialize();
-  Serial.println(mpu.testConnection() ? F("IMU iniciado correctamente") : F("Error al iniciar IMU"));
+//  Wire.begin();
+//  mpu.initialize();
+//  Serial.println(mpu.testConnection() ? F("IMU iniciado correctamente") : F("Error al iniciar IMU"));
 
   //Radio initialization
   if (!driver.init())
     Serial.println("init failed");
     
   // PIN initialization
-  pinMode(LEFT_BLINKER, OUTPUT);
-  pinMode(RIGHT_BLINKER, OUTPUT);
-  pinMode(LIGHTS_BUTTON, INPUT_PULLUP);
-  pinMode(FRONT_LIGHT, OUTPUT);
-  pinMode(BRAKE_LIGHT, OUTPUT);
-
-  // PIN initial values
-  digitalWrite(LEFT_BLINKER, LOW);
-  digitalWrite(RIGHT_BLINKER, LOW);
-  digitalWrite(FRONT_LIGHT, LOW);
-  digitalWrite(BRAKE_LIGHT, LOW);
+  pinMode(LEFT_BLINKER, INPUT);
+  pinMode(RIGHT_BLINKER, INPUT);
+  pinMode(LIGHTS_BUTTON, INPUT);
+  pinMode(BRAKE_BUTTON, INPUT);
 
   // Interrupt initialization
-  //attachInterrupt(digitalPinToInterrupt(LIGHTS_BUTTON), lightsSwitch, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(LIGHTS_BUTTON), lightsSwitch, FALLING);
+  attachInterrupt(digitalPinToInterrupt(BRAKE_BUTTON), brakeToggle, CHANGE);
 
 }
 
-void updateFiltered()
+// Update MPU angle using complementary filter
+/*void updateFiltered()
 {
   dt = (millis() - prev_time) / 1000.0;
   prev_time = millis();
@@ -85,10 +78,14 @@ void updateFiltered()
   ang_y = 0.98 * (ang_y_prev + (gy / 131) * dt) + 0.02 * accel_ang_y;
 
   ang_y_prev = ang_y;
+}*/
+
+void lightsSwitch(){
+  sendMessage(LIGHTS_MESSAGE);
 }
 
-void Blinkers(int LED, bool on) {
-  (on) ? digitalWrite(LED, HIGH) : digitalWrite(LED, LOW);
+void brakeToggle(){
+  sendMessage(LIGHTS_MESSAGE);
 }
 
 void sendMessage(int message){
@@ -131,22 +128,22 @@ void sendMessage(int message){
 void loop()
 {
 
-  mpu.getAcceleration(&ax, &ay, &az);
+  /*mpu.getAcceleration(&ax, &ay, &az);
   mpu.getRotation(&gx, &gy, &gz);
 
   updateFiltered();
 
   Serial.print(F("\t Rotacion en Y: "));
-  Serial.println(ang_y);
+  Serial.println(ang_y);*/
 
   ///////////////////////////////////////////////////////INTERMITENTES/////////
-  if (ang_y > 45) {
+  if (digitalRead(RIGHT_BLINKER)==LOW) {
     if(!active){
       sendMessage(RIGHT_MESSAGE);
       active = true;
     }
   }
-  else if (ang_y < -45) {
+  else if (digitalRead(LEFT_BLINKER)==LOW) {
     if(!active){
       sendMessage(LEFT_MESSAGE);
       active = true;
