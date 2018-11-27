@@ -31,7 +31,7 @@
 //float ang_y_prev;
 
 // Variables for the Radio
-RH_ASK driver(2000,2,5,10);
+RH_ASK driver(2000, 2, 5, 10);
 
 // Bool for lights status controlling
 bool turn_on = false;
@@ -39,6 +39,7 @@ bool active = false;
 bool active_left = false;
 bool active_right = false;
 bool lights = false;
+bool brake = false;
 
 void setup()
 {
@@ -53,7 +54,7 @@ void setup()
   //Radio initialization
   if (!driver.init())
     Serial.println("init failed");
-    
+
   // PIN initialization
   pinMode(LEFT_BLINKER, INPUT);
   pinMode(RIGHT_BLINKER, INPUT);
@@ -64,6 +65,17 @@ void setup()
   attachInterrupt(digitalPinToInterrupt(LIGHTS_BUTTON), lightsSwitch, FALLING);
   attachInterrupt(digitalPinToInterrupt(BRAKE_BUTTON), brakeToggle, CHANGE);
 
+void lightsSwitch(){
+
+  if(digitalRead(LIGHTS_BUTTON) == HIGH)
+    lights = true;
+  
+}
+
+void brakeActivation(){
+
+  brake = true;
+    
 }
 
 // Update MPU angle using complementary filter
@@ -88,9 +100,9 @@ void brakeToggle(){
   sendMessage(LIGHTS_MESSAGE);
 }
 
-void sendMessage(int message){
+void sendMessage(int message) {
   char *msg;
-  switch (message){
+  switch (message) {
     case RIGHT_MESSAGE:
       msg = "0";
       driver.send((uint8_t *)msg, strlen(msg));
@@ -98,7 +110,7 @@ void sendMessage(int message){
       Serial.print("Enviamos: ");
       Serial.println(msg);
       break;
-      
+
     case LEFT_MESSAGE:
       msg = "1";
       driver.send((uint8_t *)msg, strlen(msg));
@@ -106,7 +118,7 @@ void sendMessage(int message){
       Serial.print("Enviamos: ");
       Serial.println(msg);
       break;
-      
+
     case LIGHTS_MESSAGE:
       msg = "2";
       driver.send((uint8_t *)msg, strlen(msg));
@@ -114,7 +126,7 @@ void sendMessage(int message){
       Serial.print("Enviamos: ");
       Serial.println(msg);
       break;
-      
+
     case BRAKE_MESSAGE:
       msg = "3";
       driver.send((uint8_t *)msg, strlen(msg));
@@ -132,7 +144,7 @@ void loop()
   mpu.getRotation(&gx, &gy, &gz);
 
   updateFiltered();
-
+  /*
   Serial.print(F("\t Rotacion en Y: "));
   Serial.println(ang_y);*/
 
@@ -149,8 +161,18 @@ void loop()
       active = true;
     }
   }
-  else{
+  else {
     active = false;
+  }
+
+  if(lights){
+    sendMessage(LIGHTS_MESSAGE);
+    lights = false;
+  }
+  
+  if(brake){
+    sendMessage(BRAKE_MESSAGE);
+    brake = false;
   }
 
   delay(50);
