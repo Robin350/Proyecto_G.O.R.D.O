@@ -32,45 +32,23 @@ bool brake = false;
 void setup()
 {
   
-    Serial.begin(19200); // Debugging only
+    Serial.begin(9600); // Debugging only
     driver.init();
-    pinMode(LEFT_BLINKER,OUTPUT);
-    pinMode(RIGHT_BLINKER,OUTPUT);
+    pinMode(LEFT,OUTPUT);
+    pinMode(RIGHT,OUTPUT);
     pinMode(BRAKE_LIGHT,OUTPUT);
     pinMode(FRONT_LIGHT,OUTPUT);
 
-    digitalWrite(LEFT_BLINKER,LOW);
-    digitalWrite(RIGHT_BLINKER,LOW);
+    digitalWrite(LEFT,LOW);
+    digitalWrite(RIGHT,LOW);
     digitalWrite(BRAKE_LIGHT,LOW);
     digitalWrite(FRONT_LIGHT,LOW);
     
     Serial.print("hola");
 }
 
-void Blinkers(int LED){
-    (b_on)?digitalWrite(LED,HIGH):digitalWrite(LED,LOW);
-}
 
 void Blink(){
-  if(right){
-    Blinkers(RIGHT);
-    if(left){
-      digitalWrite(LEFT,LOW);
-      left = false;
-    }
-  }
-  else if(left){
-    Blinkers(LEFT);
-    if(right){
-      digitalWrite(RIGHT,LOW);
-      right = false;
-    }
-  }
-  else{
-    right=left=false;
-    digitalWrite(RIGHT,LOW);
-    digitalWrite(LEFT,LOW);
-  }
     
 }
 
@@ -99,6 +77,9 @@ void updateLights(bool fr, bool br){
     Front();
   if(br)
     Brake();
+
+  Blink();
+
 }
 
 void loop()
@@ -113,28 +94,12 @@ void loop()
         driver.recv(buf, &buflen); // Non-blocking
         int num = atoi((const char*) buf);
         switch(num){
-           case RIGHT_BLINKER:
-            
+           case RIGHT_BLINKER:          
             right = !right;
-            if(right){
-              Serial.print("Encendemos derecha\n");
-              digitalWrite(RIGHT,HIGH);
-            }
-            else{
-              Serial.print("Apagamos derecha\n");
-              digitalWrite(RIGHT, LOW);
-            }
             break;
 
            case LEFT_BLINKER:
             left = !left;
-            
-            if(left){
-              digitalWrite(LEFT,HIGH);
-            }
-            else{
-              digitalWrite(LEFT, LOW);
-            }
             break;
 
            case LIGHTS:
@@ -150,4 +115,5 @@ void loop()
     }
 
     updateLights(fr,br);
+
 }
