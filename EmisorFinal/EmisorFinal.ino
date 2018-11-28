@@ -7,8 +7,8 @@
 #include <Wire.h>
 
 // Defines for Arduino PINs
-#define LIGHTS_BUTTON 7
-#define BRAKE_BUTTON 6
+#define LIGHTS_BUTTON 2
+#define BRAKE_BUTTON 3
 #define LEFT_BLINKER 8
 #define RIGHT_BLINKER 9
 
@@ -34,12 +34,10 @@
 RH_ASK driver(2000, 2, 5, 10);
 
 // Bool for lights status controlling
-bool turn_on = false;
-bool active = false;
+bool active_lights = false;
+bool active_brake = false;
 bool active_left = false;
 bool active_right = false;
-bool lights = false;
-bool brake = false;
 
 void setup()
 {
@@ -60,23 +58,8 @@ void setup()
   pinMode(RIGHT_BLINKER, INPUT);
   pinMode(LIGHTS_BUTTON, INPUT);
   pinMode(BRAKE_BUTTON, INPUT);
-
-  // Interrupt initialization
-  attachInterrupt(digitalPinToInterrupt(LIGHTS_BUTTON), lightsSwitch, FALLING);
-  attachInterrupt(digitalPinToInterrupt(BRAKE_BUTTON), brakeToggle, CHANGE);
-
-void lightsSwitch(){
-
-  if(digitalRead(LIGHTS_BUTTON) == HIGH)
-    lights = true;
-  
 }
 
-void brakeActivation(){
-
-  brake = true;
-    
-}
 
 // Update MPU angle using complementary filter
 /*void updateFiltered()
@@ -91,14 +74,6 @@ void brakeActivation(){
 
   ang_y_prev = ang_y;
 }*/
-
-void lightsSwitch(){
-  sendMessage(LIGHTS_MESSAGE);
-}
-
-void brakeToggle(){
-  sendMessage(LIGHTS_MESSAGE);
-}
 
 void sendMessage(int message) {
   char *msg;
@@ -148,32 +123,51 @@ void loop()
   Serial.print(F("\t Rotacion en Y: "));
   Serial.println(ang_y);*/
 
-  ///////////////////////////////////////////////////////INTERMITENTES/////////
-  if (digitalRead(RIGHT_BLINKER)==LOW) {
-    if(!active){
-      sendMessage(RIGHT_MESSAGE);
-      active = true;
-    }
-  }
-  else if (digitalRead(LEFT_BLINKER)==LOW) {
-    if(!active){
+///////////////////////////////////////////////////////INTERMITENTE IZQ/////////
+  if (digitalRead(LEFT_BLINKER)==LOW) {
+    if(!active_left){
       sendMessage(LEFT_MESSAGE);
-      active = true;
+      active_left = true;
     }
   }
   else {
-    active = false;
+    active_left = false;
   }
 
-  if(lights){
-    sendMessage(LIGHTS_MESSAGE);
-    lights = false;
+///////////////////////////////////////////////////////INTERMITENTE DER/////////
+  if (digitalRead(RIGHT_BLINKER)==LOW) {
+    if(!active_right){
+      sendMessage(RIGHT_MESSAGE);
+      active_right = true;
+    }
   }
-  
-  if(brake){
-    sendMessage(BRAKE_MESSAGE);
-    brake = false;
+  else {
+    active_right = false;
   }
 
-  delay(50);
+///////////////////////////////////////////////////////LUCES///////////////////
+  if (digitalRead(LIGHTS_BUTTON)==LOW) {
+    if(!active_lights){
+      sendMessage(LIGHTS_MESSAGE);
+      active_lights = true;
+    }
+  }
+  else {
+    active_lights = false;
+  }
+
+
+///////////////////////////////////////////////////////FRENO///////////////////
+  if (digitalRead(BRAKE_BUTTON)==LOW) {
+    if(!active_brake){
+      sendMessage(BRAKE_MESSAGE);
+      active_brake = true;
+    }
+  }
+  else {
+    if(active_brake){
+      sendMessage(BRAKE_MESSAGE);
+      active_brake = false;
+    }
+  }
 }
