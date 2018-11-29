@@ -22,54 +22,40 @@
 #define LIGHTS 2
 #define BRAKE 3
 
-#define NULL_PIN 8
-
 RH_ASK driver(2000,DATA_R,2,10);
-
-char blinker = '0';
-bool lights = false;
-bool brake = false; 
-int LED;
-
-volatile unsigned int count = 0;
-bool state = false;
 
 uint8_t buf[5];
 uint8_t buflen = sizeof(buf);
 
-bool fr,br,bl, thereIsMessage;
+bool fr,br,bl,lights,brake,thereIsMessage;
+
+char blinker = '0'; 
 
 void setup()
 {
-  
-    Serial.begin(9600); // Debugging only
     driver.init();
+    
     pinMode(LEFT,OUTPUT);
     pinMode(RIGHT,OUTPUT);
     pinMode(BRAKE_LIGHT,OUTPUT);
     pinMode(FRONT_LIGHT,OUTPUT);
-    pinMode(NULL_PIN,OUTPUT);
-
-    digitalWrite(LEFT,LOW);
-    digitalWrite(RIGHT,LOW);
-    digitalWrite(BRAKE_LIGHT,LOW);
-    digitalWrite(FRONT_LIGHT,LOW);
 
     SREG = (SREG & 0b01111111); //Desabilitar interrupciones
     TIMSK2 = TIMSK2|0b00000001; //Habilita la interrupcion por desbordamiento
     TCCR2B = 0b00000111; //Configura preescala para que FT2 sea de 7812.5Hz
     SREG = (SREG & 0b01111111) | 0b10000000; //Habilitar interrupciones //Desabilitar interrupciones
 
-    thereIsMessage= false;
-    
-    Serial.print("hola");
+    thereIsMessage=lights=brake= false;
+    digitalWrite(LEFT,LOW);
+    digitalWrite(RIGHT,LOW);
+    digitalWrite(BRAKE_LIGHT,LOW);
+    digitalWrite(FRONT_LIGHT,LOW);
 }
 
 
 ISR(TIMER2_OVF_vect){
 
   if(driver.available()){
-    Serial.println("Hay un santo mensaje");
     driver.recv(buf, &buflen);
     thereIsMessage = true;
   }
@@ -82,6 +68,7 @@ void Brake(){
     else{
       digitalWrite(BRAKE_LIGHT,LOW);
     }
+    br = false;
 }
 
 void Front(){
@@ -90,29 +77,26 @@ void Front(){
     }
     else{
       digitalWrite(FRONT_LIGHT,LOW);
-      if(!brake)
-        digitalWrite(BRAKE_LIGHT,LOW);
     }
+    fr = false;
 }
 
 void Blink(){
     
-  if(bl){
-    if(blinker == 'l'){
-      digitalWrite(LEFT,HIGH);
-      digitalWrite(RIGHT,LOW);
-    }
-    else if(blinker == 'r'){
-      digitalWrite(RIGHT,HIGH);
-      digitalWrite(LEFT,LOW);
-    }
-    else if(blinker == '0'){
-      digitalWrite(LEFT,LOW);
-      digitalWrite(RIGHT,LOW);
-      blinker = 'x';
-    }
-    bl = false;
+  if(blinker == 'l'){
+    digitalWrite(LEFT,HIGH);
+    digitalWrite(RIGHT,LOW);
   }
+  else if(blinker == 'r'){
+    digitalWrite(RIGHT,HIGH);
+    digitalWrite(LEFT,LOW);
+  }
+  else{
+    digitalWrite(LEFT,LOW);
+    digitalWrite(RIGHT,LOW);
+  }
+  bl = false;
+  
 }
 
 void updateLights(){
@@ -128,7 +112,7 @@ void newMessage(){
   int num = atoi((const char*) buf);
   switch(num){
      case RIGHT_BLINKER:          
-      if(blinker == '0' || blinker == 'x'){
+      if(blinker != 'r'){
         blinker = 'r';
       }
       else{
@@ -138,7 +122,7 @@ void newMessage(){
       break;
 
      case LEFT_BLINKER:
-      if(blinker == '0' || blinker == 'x'){
+      if(blinker != 'l'){
         blinker = 'l';
       }
       else{
@@ -161,15 +145,11 @@ void newMessage(){
 
 void loop()
 {
-    fr=br=bl=false;
     if(thereIsMessage){
       cli();
       thereIsMessage = false;
       newMessage();
-      sei();
+      updateLights();
+      sei();      
     }
-
-    updateLights();
-    delay(50);
-
 }
