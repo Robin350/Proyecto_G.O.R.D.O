@@ -1,5 +1,12 @@
-//SDA - Pin A4
-//SCL - Pin A5
+/*
+ * Coded by: 
+ *  Robin Costas del Moral 
+ *  Antonio Jaimez Jimenez
+ *  
+ *    TE < ETSIIT < UGR
+ *    
+ */
+ 
 #include <RH_ASK.h>
 #include <SPI.h> // Not actually used but needed to compile
 #include <I2Cdev.h>
@@ -19,18 +26,16 @@
 #define BRAKE_MESSAGE 3
 
 // Variables for the MPU6050
-//const int mpuAddress = 0x68;
-//MPU6050 mpu(mpuAddress);
+const int mpuAddress = 0x68;
+MPU6050 mpu(mpuAddress);
+int ax, ay, az;
+int gx, gy, gz;
+long prev_time;
+float dt;
+float ang_y;
+float ang_y_prev;
 
-//int ax, ay, az;
-//int gx, gy, gz;
-
-//long prev_time;
-//float dt;
-//float ang_y;
-//float ang_y_prev;
-
-// Variables for the Radio
+// Radio
 RH_ASK driver(2000, 2, 5, 10);
 
 // Bool for lights status controlling
@@ -39,17 +44,18 @@ bool active_brake = false;
 bool active_left = false;
 bool active_right = false;
 
+/**********************************************************
+ * Setup
+ * Initialization of the main components and variables
+ **********************************************************/
 void setup()
 {
-  // Serial for debugging
-  Serial.begin(9600);
-
   // MPU6050 initialization
-//  Wire.begin();
-//  mpu.initialize();
-//  Serial.println(mpu.testConnection() ? F("IMU iniciado correctamente") : F("Error al iniciar IMU"));
+  MPU6050 initialization
+  Wire.begin();
+  mpu.initialize();
 
-  //Radio initialization
+  // Radio initialization
   if (!driver.init())
     Serial.println("init failed");
 
@@ -61,8 +67,11 @@ void setup()
 }
 
 
-// Update MPU angle using complementary filter
-/*void updateFiltered()
+/******************************************************
+ *  updateFiltered
+ *  Update MPU 'y' angle using complementary filter
+ ******************************************************/
+void updateFiltered()
 {
   dt = (millis() - prev_time) / 1000.0;
   prev_time = millis();
@@ -73,58 +82,32 @@ void setup()
   ang_y = 0.98 * (ang_y_prev + (gy / 131) * dt) + 0.02 * accel_ang_y;
 
   ang_y_prev = ang_y;
-}*/
-
-void sendMessage(int message) {
-  char *msg;
-  switch (message) {
-    case RIGHT_MESSAGE:
-      msg = "0";
-      driver.send((uint8_t *)msg, strlen(msg));
-      driver.waitPacketSent();
-      Serial.print("Enviamos: ");
-      Serial.println(msg);
-      break;
-
-    case LEFT_MESSAGE:
-      msg = "1";
-      driver.send((uint8_t *)msg, strlen(msg));
-      driver.waitPacketSent();
-      Serial.print("Enviamos: ");
-      Serial.println(msg);
-      break;
-
-    case LIGHTS_MESSAGE:
-      msg = "2";
-      driver.send((uint8_t *)msg, strlen(msg));
-      driver.waitPacketSent();
-      Serial.print("Enviamos: ");
-      Serial.println(msg);
-      break;
-
-    case BRAKE_MESSAGE:
-      msg = "3";
-      driver.send((uint8_t *)msg, strlen(msg));
-      driver.waitPacketSent();
-      Serial.print("Enviamos: ");
-      Serial.println(msg);
-      break;
-  }
 }
 
+/******************************************************
+ * sendMessage(message to be sent)
+ * Sends the message given as a parameter via the driver
+ ******************************************************/
+void sendMessage(int message) {
+  driver.send((uint8_t *)message, strlen(message));
+  diver.waitPacketSent();
+}
+
+/*******************************************************
+ * Main loop
+ * Check for MPU and button status and send messages 
+ * accordingly
+ *******************************************************/
 void loop()
 {
 
-  /*mpu.getAcceleration(&ax, &ay, &az);
+  mpu.getAcceleration(&ax, &ay, &az);
   mpu.getRotation(&gx, &gy, &gz);
 
   updateFiltered();
-  /*
-  Serial.print(F("\t Rotacion en Y: "));
-  Serial.println(ang_y);*/
 
 ///////////////////////////////////////////////////////INTERMITENTE IZQ/////////
-  if (digitalRead(LEFT_BLINKER)==LOW) {
+  if (ang_y > 45) {
     if(!active_left){
       sendMessage(LEFT_MESSAGE);
       active_left = true;
@@ -135,7 +118,7 @@ void loop()
   }
 
 ///////////////////////////////////////////////////////INTERMITENTE DER/////////
-  if (digitalRead(RIGHT_BLINKER)==LOW) {
+  if (ang_y < 45) {
     if(!active_right){
       sendMessage(RIGHT_MESSAGE);
       active_right = true;
